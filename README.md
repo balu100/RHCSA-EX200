@@ -521,6 +521,42 @@ This repo wasn't built by me, i just found the repo that someone has made and de
       ```shell
       exec /sbin/init
       ```
+1. Systemd timers  
+
+    * Systemd timers are the modern replacement for cron in RHEL 9.  
+      They allow you to schedule service units using systemd instead of crontab.  
+      Timers are explicitly listed in the RHCSA 9 exam objectives.  
+
+    * Create a systemd service unit file:  
+        ```ini
+        # /etc/systemd/system/cleanup.service
+        [Unit]
+        Description=Cleanup temporary files
+
+        [Service]
+        Type=oneshot
+        ExecStart=/usr/local/bin/cleanup.sh
+        ```
+
+    * Create a timer unit file that runs the service every 30 minutes:  
+        ```ini
+        # /etc/systemd/system/cleanup.timer
+        [Unit]
+        Description=Run cleanup every 30 minutes
+
+        [Timer]
+        OnCalendar=*:0/30
+        Persistent=true
+
+        [Install]
+        WantedBy=timers.target
+        ```
+
+    * Enable and check the timer:  
+        ```shell
+        systemctl enable --now cleanup.timer
+        systemctl list-timers
+        ```
 
 
 
@@ -852,6 +888,45 @@ This repo wasn't built by me, i just found the repo that someone has made and de
         ```
 
     * The `/etc/fstab` file will need a new entry for the swap so that it is created persistently.
+
+
+1. Configure and use Stratis
+
+    * Stratis is a local storage management solution that provides features similar to ZFS/Btrfs but integrated with RHEL.
+      It allows you to manage pools and filesystems with simple commands.
+
+    * To install and enable Stratis:
+        ```shell
+        dnf install stratisd stratis-cli -y
+        systemctl enable --now stratisd
+        ```
+
+    * To create a pool and filesystem:
+        ```shell
+        stratis pool create mypool /dev/sdb
+        stratis filesystem create mypool myfs
+        ```
+
+    * To mount the filesystem:
+        ```shell
+        mount /stratis/mypool/myfs /mnt
+        ```
+
+1. Configure and use VDO
+
+    * VDO (Virtual Data Optimizer) provides compression and deduplication for block devices.
+
+    * To install VDO:
+        ```shell
+        dnf install vdo kmod-kvdo -y
+        ```
+
+    * To create and use a VDO volume:
+        ```shell
+        vdo create --name=vdo1 --device=/dev/sdc --vdoLogicalSize=50G
+        mkfs.xfs /dev/mapper/vdo1
+        mount /dev/mapper/vdo1 /mnt/vdo
+        ```
 
 ### Create and configure file systems
 
@@ -2026,7 +2101,7 @@ This repo wasn't built by me, i just found the repo that someone has made and de
 		vi Dockerfile
 		# contents of Dockerfile
         #####
-        #FROM registry.access.redhat.com/ubi8/ubi-init
+        #FROM registry.access.redhat.com/ubi9/ubi
 		#RUN yum -y install httpd; yum clean all; systemctl enable httpd;
 		#RUN echo "Successful Web Server Test" > /var/www/html/index.html
 		#RUN mkdir /etc/systemd/system/httpd.service.d/; echo -e '[Service]\nRestart=always' > /etc/systemd/system/httpd.service.d/httpd.conf
@@ -2083,7 +2158,7 @@ This repo wasn't built by me, i just found the repo that someone has made and de
         ```shell
 		ls /dev/sda1 # using this disk
 		mkdir -p /home/containers/disk1
-		podman run --privileged -it -v /home/containers/disk1:/mnt docker.io/library/httpd /bin/bash #  --privileged to allow with SELinux, -it for interactive terminal, -v to mount, and /bin/bash to provide a terminal
+		podman run -d -v /home/containers/disk1:/usr/share/nginx/html:Z -p 8080:80 nginx
         ```
 
 ### Exercises
@@ -2092,14 +2167,18 @@ This repo wasn't built by me, i just found the repo that someone has made and de
 
     * Recover the system and fix repositories:
         ```shell
-        # press e at grub menu
-        rd.break # add to line starting with "linux16"
-        # Replace line containing "BAD" with "x86_64"
-        mount -o remount, rw /sysroot
-        chroot /sysroot
-        passwd
-        touch /.autorelabel
-        # reboot
+        Interrupt the boot process in order to gain access to a system
+       # At the GRUB2 menu press e to edit the selected entry.
+       # On the line that starts with linux append:  init=/bin/bash
+       # Press Ctrl+X to boot.
+       # Remount the root filesystem read-write:
+         mount -o remount,rw /
+       # Change the root password:
+         passwd
+       # Ensure SELinux relabel on next boot:
+         touch /.autorelabel
+       # Reboot cleanly:
+         exec /sbin/init
         # reboot - will occur automaticaly after relabel (you can now login)
         grub2-mkconfig -o /boot/grub2/grub.cfg # fix grub config
         yum repolist all
@@ -2492,15 +2571,19 @@ This repo wasn't built by me, i just found the repo that someone has made and de
 		virt-viewer centos7.0 # virt-manager can also be used
 		# now we are connected to the virtual machine
 		# send key Ctrl+Alt+Del when prompted for password, as we don't know it
-		# press e on GRUB screen
-		# add rd.break on the linux16 line
-		# now at the emergency console
-		mount -o remount, rw /sysroot
-		chroot /sysroot
-		passwd
-		touch /.autorelabel
-		reboot -f # needs -f to work for some reason
-		# it will restart when it completes relabelling
+		Interrupt the boot process in order to gain access to a system
+       # At the GRUB2 menu press e to edit the selected entry.
+       # On the line that starts with linux append:  init=/bin/bash
+       # Press Ctrl+X to boot.
+       # Remount the root filesystem read-write:
+         mount -o remount,rw /
+       # Change the root password:
+         passwd
+       # Ensure SELinux relabel on next boot:
+         touch /.autorelabel
+       # Reboot cleanly:
+         exec /sbin/init
+
         ```
 
     * Create three users (Derek, Tom, and Kenny) that belong to the instructors group. Prevent Tom's user from accessing a shell, and make his account expire 10 day from now:
@@ -3029,11 +3112,18 @@ This repo wasn't built by me, i just found the repo that someone has made and de
 
 	* Terminate the boot process at an early stage to access a debug shell to reset the root password:
 	    ```shell
-		# add rd.break affter "rhgb quiet" to reboot into debug shell
-		mount -o remount, rw /sysroot
-		chroot /sysroot
-		passwd # change password
-		touch /.autorelabel
+       Interrupt the boot process in order to gain access to a system
+       # At the GRUB2 menu press e to edit the selected entry.
+       # On the line that starts with linux append:  init=/bin/bash
+       # Press Ctrl+X to boot.
+       # Remount the root filesystem read-write:
+         mount -o remount,rw /
+       # Change the root password:
+         passwd
+       # Ensure SELinux relabel on next boot:
+         touch /.autorelabel
+       # Reboot cleanly:
+         exec /sbin/init
         ```
 
 1. Asghar Ghori - Exercise 11-2: Download and Install a New Kernel
@@ -3888,16 +3978,19 @@ This repo wasn't built by me, i just found the repo that someone has made and de
 
 	* Assuming the root user password is lost, reboot the system and reset the root user password to root1234:
 	    ```shell
-		# ctrl + e after reboot
-		# add rd.break after Linux line
-		# ctrl + d
-		mount -o remount, rw /sysroot
-		chroot /sysroot
-		passwd
-		# change password to root12345
-		touch /.autorelabel
-		exit
-		reboot
+		Interrupt the boot process in order to gain access to a system
+        # At the GRUB2 menu press e to edit the selected entry.
+        # On the line that starts with linux append:  init=/bin/bash
+        # Press Ctrl+X to boot.
+        # Remount the root filesystem read-write:
+          mount -o remount,rw /
+        # Change the root password:
+          passwd
+        # Ensure SELinux relabel on next boot:
+          touch /.autorelabel
+        # Reboot cleanly:
+          exec /sbin/init
+
         ```
 
 	* Using a manual method (i.e. create/modify files by hand), configure a network connection on the primary network device with IP address 192.168.0.241/24, gateway 192.168.0.1, and nameserver 192.168.0.1:
@@ -4506,12 +4599,19 @@ This repo wasn't built by me, i just found the repo that someone has made and de
 
 	* Interrupt the boot process and reset the root password:
 	    ```shell
-		# interrupt boot process and add rd.break at end of linux line
-		mount -o remount, rw /sysroot
-		chroot /sysroot
-		passwd 
-		# enter new passwd
-		touch /.autorelabel
+		Interrupt the boot process in order to gain access to a system
+        # At the GRUB2 menu press e to edit the selected entry.
+        # On the line that starts with linux append:  init=/bin/bash
+        # Press Ctrl+X to boot.
+        # Remount the root filesystem read-write:
+          mount -o remount,rw /
+        # Change the root password:
+          passwd
+        # Ensure SELinux relabel on next boot:
+          touch /.autorelabel
+        # Reboot cleanly:
+          exec /sbin/init
+
 		# you could also add enforcing=0 to the end of the Linux line to avoid having to do this
 		# ctrl + D
 		reboot
