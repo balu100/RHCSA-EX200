@@ -522,6 +522,8 @@ This repo wasn't built by me, i just found the repo that someone has made and de
       exec /sbin/init
       ```
 
+
+
 1. Identify CPU/memory intensive processes and kill processes
 
     * A process is a unit for provisioning system resources. A process is created in memory in its own address space when a program, application, or command is initiated. Processes are organised in a hierarchical fashion. Each process has a parent process that spawns it and may have one or many child processes. Each process is assigned a unique identification number, known as the Process Identifier (PID). When a process completes its lifecycle or is terminated, this event is reported back to its parent process, and all the resources provisioned to it are then freed and the PID is removed. Processes spawned at system boot are called daemons. Many of these sit in memory and wait for an event to trigger a request to use their services.
@@ -1929,6 +1931,34 @@ This repo wasn't built by me, i just found the repo that someone has made and de
     * SELinux alerts are written to `/var/log/audit/audit.log` if the *auditd* daemon is running, or to the `/var/log/messages` file via the *rsyslog* daemon in the absence of *auditd*.
 
     * A GUI called the SELinux Troubleshooter can be accessed using the *sealert* command. This allows SELinux denial messages to be analysed and provides recommendations on how to fix issues.
+       * Check the current SELinux mode:
+      ```shell
+      getenforce
+      ```
+
+    * Search for recent denials in the audit log:
+      ```shell
+      ausearch -m avc -ts recent
+      ```
+
+    * Generate a human-readable report from audit logs:
+      ```shell
+      sealert -a /var/log/audit/audit.log
+      ```
+
+    * Toggle a boolean permanently to allow a service action (for example, Apache network access):
+      ```shell
+      setsebool -P httpd_can_network_connect on
+      ```
+
+    * Restore the correct SELinux labels for a directory:
+      ```shell
+      restorecon -Rv /srv/www
+      ```
+
+    * Typical exam scenario: Apache fails to serve files from `/srv/www`. Solution → restore labels and enable the boolean if remote connections are required.
+
+
 
 ### Manage containers
 
