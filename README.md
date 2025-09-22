@@ -501,26 +501,26 @@ This repo wasn't built by me, i just found the repo that someone has made and de
 
 1. Interrupt the boot process in order to gain access to a system
 
-    * Press *e* at the GRUB2 menu and add "rd.break" in place of "ro crash". This boot option tells the boot sequence to stop while the system is still using initramfs so that we can access the emergency shell.
+    * Press *e* at the GRUB2 menu and replace `ro crash` with `init=/bin/bash`. This tells the kernel to start directly with a bash shell instead of the normal init process.
     
-    * Press *ctrl+x* to reboot.
+    * Press *Ctrl+X* to boot.
     
-    * Run the following command to remount the `/sysroot` directory with rw privileges:
-        ```shell
-        mount -o remount,rw /sysroot
-        ```
-    *  Run the following command to change the root directory to `/sysroot`:
-        ```shell
-        chroot /sysroot
-        ```
-    *  Run *passwd* command to change the root password.
+    * Run the following command to remount the root filesystem with rw privileges:
+      ```shell
+      mount -o remount,rw /
+      ```
+
+    * Run *passwd* to change the root password.
     
-    *  Run the following commands to create an empty, hidden file to instruct the system to perform SELinux relabelling after the next boot:
-        ```shell
-        touch /.autorelabel
-        exit
-        exit
-        ```
+    * Run the following command to create an empty, hidden file to instruct the system to perform SELinux relabeling after the next boot:
+      ```shell
+      touch /.autorelabel
+      ```
+
+    * Reboot the system:
+      ```shell
+      exec /sbin/init
+      ```
 
 1. Identify CPU/memory intensive processes and kill processes
 
