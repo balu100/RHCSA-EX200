@@ -163,7 +163,8 @@ This repo wasn't built by me, i just found the repo that someone has made and de
     
     * The command *ssh-keygen* is used to generate keys and place them in the .ssh directory, and the command *ssh-copy-id* is used to copy the public key file to your account on the remote server.
     
-    * TCP Wrappers is a host-based mechanism that is used to limit access to wrappers-aware TCP services on the system by inbound clients. 2 files `/etc/hosts.allow` and `/etc/hosts.deny` are used to control access. The .allow file is referenced before the .deny file. The format of the files is \<name of service process>:\<user@source>.
+    * TCP Wrappers is a host-based mechanism that is used to limit access to wrappers-aware TCP services on the system by inbound clients. 2 files `/etc/hosts.allow` and `/etc/hosts.deny` are used to control access. The .allow file is referenced before the .deny file. The format of the files is \<name of service process>:\<user@source>. 
+    # Note: TCP Wrappers are removed in RHEL 8/9. Use firewalld rules instead.
     
     * All messages related to TCP Wrappers are logged to the `/var/log/secure` file.
     
@@ -522,7 +523,7 @@ This repo wasn't built by me, i just found the repo that someone has made and de
 
     * Systemd timers are the modern replacement for cron in RHEL 9.  
       They allow you to schedule service units using systemd instead of crontab.  
-      Timers are explicitly listed in the RHCSA 9 exam objectives.  
+      Use systemd timers in addition to cron on RHEL 9.” The official page lists categories only.  
 
     * Create a systemd service unit file:  
         ```ini
@@ -622,7 +623,7 @@ This repo wasn't built by me, i just found the repo that someone has made and de
 
     * To install and start the tuned service:
         ```shell
-        yum install tuned
+        dnf install tuned
         systemctl enable --now tuned
         ```
  
@@ -909,21 +910,21 @@ This repo wasn't built by me, i just found the repo that someone has made and de
         mount /stratis/mypool/myfs /mnt
         ```
 
-1. Configure and use VDO
+1. Configure and use VDO (RHEL 9, LVM-VDO)
 
-    * VDO (Virtual Data Optimizer) provides compression and deduplication for block devices.
-
-    * To install VDO:
+    * Install required packages:
         ```shell
-        dnf install vdo kmod-kvdo -y
+        dnf install -y lvm2 kmod-kvdo vdo
         ```
 
-    * To create and use a VDO volume:
+    * Create an LVM VDO logical volume:
         ```shell
-        vdo create --name=vdo1 --device=/dev/sdc --vdoLogicalSize=50G
-        mkfs.xfs /dev/mapper/vdo1
-        mount /dev/mapper/vdo1 /mnt/vdo
+        vgcreate vg0 /dev/sdc
+        lvcreate --type vdo --name vdo1 --size 1T --virtualsize 10T vg0
+        mkfs.xfs -K /dev/vg0/vdo1
+        mount /dev/vg0/vdo1 /mnt/vdo
         ```
+
 
 ### Create and configure file systems
 
@@ -3579,24 +3580,31 @@ This repo wasn't built by me, i just found the repo that someone has made and de
 
 1. Asghar Ghori - Exercise 17.3: Configure New Network Connection Manually
 
-	* Create a connection profile for the new network interface on *server10* using a text editing tool. Assign the IP 172.10.10.110/24 with gateway 172.10.10.1 and set it to autoactivate at system reboots. Deactivate and reactive this interface at the command prompt:
-	    ```shell
-		vi /etc/sysconfig/network-scripts/ifcfg-enp0s8
-		# add contents of file
-		#TYPE=Ethernet
-		#BOOTPROTO=static
-		#IPV4_FAILURE_FATAL=no
-		#IPV6INIT=no
-		#NAME=enp0s8
-		#DEVICE=enp0s8
-		#ONBOOT=yes
-		#IPADDR=172.10.10.110
-		#PREFIX=24
-		#GATEWAY=172.10.10.1
-		ifdown enp0s8
-		ifup enp0s8
-		ip a # verify activation
+	1. Configure a network connection manually (RHEL 9 style)
+
+    * Use nmcli to configure a static IPv4 address, gateway, and DNS:
+        ```shell
+        nmcli con add type ethernet ifname enp0s8 con-name enp0s8 \
+            ipv4.addresses 172.10.10.110/24 ipv4.gateway 172.10.10.1 \
+            ipv4.dns 8.8.8.8 ipv4.method manual
+
+        nmcli con up enp0s8
+        ip a   # verify activation
         ```
+
+    * Modify an existing connection profile:
+        ```shell
+        nmcli con mod enp0s3 ipv4.addresses 192.168.0.241/24 \
+            ipv4.gateway 192.168.0.1 ipv4.dns 192.168.0.1 ipv4.method manual
+        nmcli con up enp0s3
+        nmcli con show enp0s3
+        ```
+
+    * Profiles are saved as keyfiles in:
+        ```
+        /etc/NetworkManager/system-connections/*.nmconnection
+        ```
+
 
 1. Asghar Ghori - Exercise 17.4: Configure New Network Connection Using nmcli
 
@@ -3991,17 +3999,32 @@ This repo wasn't built by me, i just found the repo that someone has made and de
         ```
 
 	* Using a manual method (i.e. create/modify files by hand), configure a network connection on the primary network device with IP address 192.168.0.241/24, gateway 192.168.0.1, and nameserver 192.168.0.1:
-	    ```shell
-		vi /etc/sysconfig/network-scripts/ifcfg-enp0s3
-		systemctl restart NetworkManager.service
-		# add line IPADDR=192.168.0.241
-		# add line GATEWAY=192.168.0.1
-		# add line DNS=192.168.0.1
-		# add line PREFIX=24
-		# change BOOTPROTO from dhcp to none
-		ifup enp0s3
-		nmcli con show # validate
+	    
+    1. Configure a network connection manually (RHEL 9 style)
+
+    * Use nmcli to configure a static IPv4 address, gateway, and DNS:
+        ```shell
+        nmcli con add type ethernet ifname enp0s8 con-name enp0s8 \
+            ipv4.addresses 172.10.10.110/24 ipv4.gateway 172.10.10.1 \
+            ipv4.dns 8.8.8.8 ipv4.method manual
+
+        nmcli con up enp0s8
+        ip a   # verify activation
         ```
+
+    * Modify an existing connection profile:
+        ```shell
+        nmcli con mod enp0s3 ipv4.addresses 192.168.0.241/24 \
+            ipv4.gateway 192.168.0.1 ipv4.dns 192.168.0.1 ipv4.method manual
+        nmcli con up enp0s3
+        nmcli con show enp0s3
+        ```
+
+    * Profiles are saved as keyfiles in:
+        ```
+        /etc/NetworkManager/system-connections/*.nmconnection
+        ```
+
 
 	* Using a manual method (modify file by hand), set the system hostname to rhcsa1.example.com and alias rhcsa1. Make sure the new hostname is reflected in the command prompt:
 	    ```shell
@@ -4391,24 +4414,31 @@ This repo wasn't built by me, i just found the repo that someone has made and de
 		# change to rhcsa4.example.com
         ```
 
-	* On rhcsa4, configure a network connection on the primary network device with IP address 192.168.0.244/24, gateway 192.168.0.1, and nameserver 192.168.0.1 using a manual method (create/modify files by hand):
-	    ```shell
-		vi /etc/sysconfig/network-scripts/ifcfg-enp0s3
-		#TYPE=Ethernet
-		#BOOTPROTO=static
-		#DEFROUTE=yes
-		#IPV4_FAILURE_FATAL=no
-		#IPV4INIT=no
-		#NAME=mycon
-		#DEVICE=enp0s3
-		#ONBOOT=yes
-		#IPADDR=192.168.0.243
-		#PREFIX=24
-		#GATEWAY=192.168.0.1
-		#DNS1=192.168.0.1
-		ifup enp0s3
-		nmcli con edit enp0s3 # play around with print ipv4 etc. to confirm settings
+	1. Configure a network connection manually (RHEL 9 style)
+
+    * Use nmcli to configure a static IPv4 address, gateway, and DNS:
+        ```shell
+        nmcli con add type ethernet ifname enp0s8 con-name enp0s8 \
+            ipv4.addresses 172.10.10.110/24 ipv4.gateway 172.10.10.1 \
+            ipv4.dns 8.8.8.8 ipv4.method manual
+
+        nmcli con up enp0s8
+        ip a   # verify activation
         ```
+
+    * Modify an existing connection profile:
+        ```shell
+        nmcli con mod enp0s3 ipv4.addresses 192.168.0.241/24 \
+            ipv4.gateway 192.168.0.1 ipv4.dns 192.168.0.1 ipv4.method manual
+        nmcli con up enp0s3
+        nmcli con show enp0s3
+        ```
+
+    * Profiles are saved as keyfiles in:
+        ```
+        /etc/NetworkManager/system-connections/*.nmconnection
+        ```
+
 
 	* Run "ping -c2 rhcsa4" on rhcsa3. Run "ping -c2 rhcsa3" on rhcsa4. You should see 0% loss in both outputs:
 	    ```shell
@@ -4663,6 +4693,7 @@ This repo wasn't built by me, i just found the repo that someone has made and de
 	    ```shell
 		vi /etc/sysctl.conf
 		# add line for net.ipv4.port_forward=1
+        # add line for net.ipv4.ip_forward=1
         ```
 
 	* System1 should boot into the multiuser target by default and boot messages should be present (not silenced):
