@@ -72,7 +72,7 @@
 * **Boot Process:**
 
   * Interrupt GRUB (`e`).
-  * Reset root password: `rd.break`, `Ctrl+X`, `mount -o remount,rw /sysroot`, `chroot /sysroot`, `passwd`, `touch /.autorelabel`, `exit`, `exit`.
+  * Reset root password: `rw init=/bin/bash`, `Ctrl+X`, `passwd`, `touch /.autorelabel`, `exec /sbin/init`.
 
 * **Systemd Management:**
 
