@@ -138,8 +138,8 @@
 * `partprobe` # reload partition table
 
 #### LVM
-* `pvcreate /dev/sdb1 /dev/sdc1` # init PVs  
-* `vgcreate my_vg /dev/sdb1 /dev/sdc1` # create VG from PVs  
+* `pvcreate /dev/sdb1 /dev/sdc1` # init PV(s)  
+* `vgcreate my_vg /dev/sdb1 /dev/sdc1` # create VG from PV(s)  
 * `lvcreate -n my_lv -L 10G my_vg` # new LV  
 * `lvextend -r -L +5G /dev/my_vg/my_lv` # extend LV + FS (ext4/XFS)  
 * Shrink ext4: `umount`, `e2fsck -f`, `resize2fs <smaller>`, `lvreduce -L <smaller>`, `e2fsck`, `mount`  
