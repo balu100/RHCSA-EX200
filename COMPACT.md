@@ -111,19 +111,10 @@
   * `partprobe`: Reload partition table
 
 * **LVM:**
-
-  1. `pvcreate /dev/sdb1`
-  2. `vgcreate my_vg /dev/sdb1 /dev/sdc1`
-  3. `lvcreate -n my_lv -L 10G my_vg`
-
-  * Extend: `lvextend -L +5G /dev/my_vg/my_lv`, then `resize2fs` (ext4) or `xfs_growfs` (XFS)
-  * Reduce (⚠ destructive):
-
-    1. Unmount LV
-    2. `e2fsck -f /dev/my_vg/my_lv`
-    3. `resize2fs /dev/my_vg/my_lv <smaller_size>`
-    4. `lvreduce -L <smaller_size> /dev/my_vg/my_lv`
-  * Display: `pvs`, `vgs`, `lvs`
+  * Create: `pvcreate /dev/sd[b-c]1`, `vgcreate my_vg /dev/sd[b-c]1`, `lvcreate -n my_lv -L 10G my_vg`
+  * Extend: `lvextend -r -L +5G /dev/my_vg/my_lv`   # grows LV + FS (ext4/XFS)
+  * Reduce (⚠ ext4 only): `umount`, `e2fsck -f`, `resize2fs <smaller_size>`, `lvreduce -L <smaller_size>`, `e2fsck`, `mount`
+  * Display: `pvs`, `vgs`, `lvs`, `lsblk -f`
 
 * **VDO:**
 
