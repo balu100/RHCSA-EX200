@@ -4,288 +4,331 @@
 
 ### **1. Essential Tools & File Management**
 
-* List files: `ls -lathr` # long, all, human-readable, time-sorted, reverse
+#### Navigation & Inspection
 
-* Current dir: `pwd` # print working directory
+* `ls -lathr` # list files long, all, human-readable, time-sorted, reverse
+* `pwd` # print working directory
+* `cd [~, -, .., /]` # home, previous, parent, root
+* `id` # show UID/GID info
+* `whoami` # show current user
+* `who`, `w` # logged in users
+* `last`, `lastb` # login and failed attempts
+* `uname -a` # kernel + OS details
+* `hostnamectl` # system hostname info
+* `timedatectl` # system time info
+* `lscpu` # CPU details
+* `grep -nviEw 'pattern' file` # search text with options
+* `find /path -name file.txt` # search file by name
+* `which cmd` # path to command
+* `whatis cmd` # short description
+* `apropos keyword` # search manual pages
+* `lsmod` # list kernel modules
+* `modprobe modulename` # load module
+* `lsusb` # list USB devices
+* `lspci` # list PCI devices
 
-* Change dir: `cd [~, -, .., /]` # home, prev, parent, root
+#### File & Directory Manipulation
 
-* User info: `id`, `whoami` # UID/GID, current user
+* `touch file` # create empty file
+* `mkdir -p /path/to/dir` # create dirs recursively
+* `cp -r src dest` # copy recursively
+* `mv src dest` # move or rename
+* `rm -rf file/dir` # force remove
 
-* Sessions: `who`, `w`, `last`, `lastb` # login details, history
+#### Links
 
-* System info: `uname -a`, `hostnamectl`, `timedatectl`, `lscpu` # kernel, host, time, CPU
+* `ln -s target link` # soft link
+* `ln target link` # hard link
 
-* Search text: `grep -nviEw 'pattern' file` # line numbers, invert, ignore-case, word
+#### Archiving & Compression
 
-* Find file: `find /path -name file.txt` # search by name
+* `tar -cvzf file.tar.gz /path` # create gzipped archive
+* `tar -xvzf file.tar.gz` # extract gzipped archive
 
-* Command info: `which`, `whatis`, `apropos` # binary path, description, search
+#### Redirection & Piping
 
-* Kernel modules: `lsmod`, `modprobe modulename` # list or load module
+* `>` # redirect stdout overwrite
+* `>>` # redirect stdout append
+* `2>` # redirect stderr
+* `&>` or `2>&1` # redirect both stdout & stderr
+* `<` # redirect stdin
+* `|` # pipe
 
-* Hardware: `lsusb`, `lspci` # USB and PCI devices
+#### Permissions
 
-* Create file: `touch file` # empty file
+* `chmod 755 file` # rwx r-x r-x
+* `chmod u+x file` # add exec for user
+* `chown user:group file` # change ownership
+* `chmod u+s file` # SUID
+* `chmod g+s file` # SGID
+* `chmod +t dir` # sticky bit
 
-* Make dir: `mkdir -p /path/to/dir` # recursive dirs
+#### Documentation
 
-* Copy: `cp [-r] source dest` # copy files or directories
+* `man cmd` # manual
+* `info cmd` # info page
+* `/usr/share/doc` # docs directory
 
-* Move: `mv source dest` # move or rename
+#### Vim
 
-* Remove: `rm [-rf] file/dir` # force recursive delete
+* `i` # insert
+* `:wq` # save & quit
+* `:q!` # quit no save
 
-* Symlink: `ln -s target link_name` # soft link
+#### Simple Shell Scripting
 
-* Hard link: `ln target link_name` # hard link
-
-* Archive: `tar -cvzf archive.tar.gz /path` # create gzipped tarball
-
-* Extract: `tar -xvzf archive.tar.gz` # extract gzipped tarball
-
-* Redirect stdout: `>` # overwrite
-
-* Append stdout: `>>` # append
-
-* Redirect stderr: `2>` # stderr only
-
-* Both: `&>` or `2>&1` # stdout + stderr
-
-* Redirect stdin: `<` # feed input
-
-* Pipe: `|` # send output to next cmd
-
-* Change perms: `chmod 755 file` # rwx r-x r-x
-
-* Symbolic perms: `chmod u+x file` # add exec to user
-
-* Change owner: `chown user:group file` # set ownership
-
-* Special perms: `chmod u+s file` # SUID, `g+s` SGID, `+t` sticky
-
-* Docs: `man`, `info`, `/usr/share/doc` # documentation sources
-
-* Vim basics: `i` insert, `:wq` save+quit, `:q!` quit no save
-
-* Bash script: `#!/bin/bash` # shebang
-
-* Args: `$1`, `$2` # positional
-
-* Exit code: `$?` # last command status
-
-* If: `if [ cond ]; then ... fi`
-
-* Loop: `for i in ...; do ... done`
+* `#!/bin/bash` # shebang
+* `$1`, `$2` # positional parameters
+* `$?` # exit code
+* `if [ cond ]; then ... fi` # condition
+* `for i in list; do ... done` # loop
 
 ---
 
 ### **2. Operate Running Systems**
 
-* Boot reset root: `rw init=/bin/bash`, `Ctrl+X`, `passwd`, `touch /.autorelabel`, `exec /sbin/init` # reset root password
+#### Boot Process
 
-* Systemctl basic: `systemctl start|stop|restart|status service`
+* `rw init=/bin/bash`, `Ctrl+X`, `passwd`, `touch /.autorelabel`, `exec /sbin/init` # reset root password
 
-* Enable/disable: `systemctl enable|disable service`
+#### Systemd Management
 
-* Default target: `systemctl get-default`, `systemctl set-default multi-user.target`
+* `systemctl start|stop|restart|status service` # control services
+* `systemctl enable|disable service` # enable/disable
+* `systemctl get-default` # show default target
+* `systemctl set-default multi-user.target` # set default target
+* `systemctl isolate rescue.target` # switch to rescue
 
-* Switch target: `systemctl isolate rescue.target` # single user
+#### Process Management
 
-* Process list: `ps aux`, `top` # show processes
+* `ps aux` # process list
+* `top` # interactive monitor
+* `kill PID` # kill by PID
+* `pkill name` # kill by name
+* `killall name` # kill all matching
+* `kill -9 PID` # force kill
+* `nice -n 10 cmd` # set priority
+* `renice -n 5 PID` # change priority
 
-* Kill: `kill PID`, `pkill name`, `killall name` # terminate process
+#### Logging
 
-* Force kill: `kill -9 PID`
+* `journalctl` # view logs
+* `journalctl -u service` # service logs
+* `journalctl -f` # follow logs
+* `mkdir -p /var/log/journal` # enable persistent
+* `systemctl restart systemd-journald` # restart journald
+* Legacy: `/var/log/messages`, `/var/log/secure`, `/var/log/cron`
 
-* Priority: `nice -n 10 cmd`, `renice -n 5 PID`
+#### Tuning Profiles
 
-* Logs: `journalctl`, `journalctl -u service`, `journalctl -f` # full, service, follow
-
-* Persistent logs: `mkdir -p /var/log/journal`, `systemctl restart systemd-journald`
-
-* Legacy logs: `/var/log/messages`, `/var/log/secure`, `/var/log/cron`
-
-* Tuned profile: `tuned-adm active` # current profile
-
-* Recommend: `tuned-adm recommend` # suggest best profile
-
-* Switch: `tuned-adm profile balanced` # apply profile
+* `tuned-adm active` # current profile
+* `tuned-adm recommend` # suggest profile
+* `tuned-adm profile balanced` # switch profile
 
 ---
 
-### **3. Local Storage Management (LVM, VDO, Stratis)**
+### **3. Local Storage Management**
 
-* Show disks: `lsblk`, `blkid` # block layout, UUIDs
+#### Partitioning
 
-* Partition: `fdisk /dev/sdx` # MBR, `gdisk /dev/sdx` # GPT
+* `lsblk` # block layout
+* `blkid` # UUIDs
+* `fdisk /dev/sdx` # MBR
+* `gdisk /dev/sdx` # GPT
+* `partprobe` # reload partition table
 
-* Reload table: `partprobe` # refresh kernel
+#### LVM
 
-* Create LVM: `pvcreate /dev/sd[b-c]1`, `vgcreate my_vg /dev/sd[b-c]1`, `lvcreate -n my_lv -L 10G my_vg`
+* Create PVs: `pvcreate /dev/sdb1 /dev/sdc1` # init multiple partitions  
+* Create VG: `vgcreate my_vg /dev/sdb1 /dev/sdc1` # group PVs into VG  
+* Create LV: `lvcreate -n my_lv -L 10G my_vg` # carve LV from VG  
 
-* Extend LVM: `lvextend -r -L +5G /dev/my_vg/my_lv` # grow LV + filesystem (ext4/XFS)
+* Extend LV + FS: `lvextend -r -L +5G /dev/my_vg/my_lv` # grow LV + FS (ext4/XFS)  
+  - Alt: `lvextend -L +5G /dev/my_vg/my_lv` then `resize2fs` (ext4) or `xfs_growfs /mnt`  
 
-* Shrink LVM (ext4 only): `umount`, `e2fsck -f`, `resize2fs <smaller>`, `lvreduce -L <smaller>`, `e2fsck`, `mount`
+* Shrink LV (⚠ ext4 only):  
+  - `umount /dev/my_vg/my_lv`  
+  - `e2fsck -f /dev/my_vg/my_lv`  
+  - `resize2fs /dev/my_vg/my_lv <smaller>`  
+  - `lvreduce -L <smaller> /dev/my_vg/my_lv`  
+  - `e2fsck -f /dev/my_vg/my_lv`, `mount`  
 
-* Show LVM: `pvs`, `vgs`, `lvs`, `lsblk -f`
+* Display info:  
+  - `pvs` # PVs with size/free  
+  - `vgs` # VG summary  
+  - `lvs` # LV list  
+  - `lsblk -f` # block + FS mapping  
 
-* VDO create: `vdo create --name=my_vdo --device=/dev/sdx --vdoLogicalSize=100G` # thin dedupe/compress
+#### VDO
 
-* Stratis create: `stratis pool create my_pool /dev/sdx`, `stratis filesystem create my_pool my_fs` # layered storage
+* `vdo create --name=my_vdo --device=/dev/sdx --vdoLogicalSize=100G` # create VDO
+
+#### Stratis
+
+* `stratis pool create my_pool /dev/sdx` # create pool
+* `stratis filesystem create my_pool my_fs` # create FS
 
 ---
 
 ### **4. Filesystems**
 
-* Make FS: `mkfs.xfs /dev/device`, `mkfs.ext4 /dev/device`, `mkswap /dev/device`
+#### Creation
 
-* Mount: `mount /dev/device /mnt/point`, `umount /mnt/point`
+* `mkfs.xfs /dev/device` # create XFS
+* `mkfs.ext4 /dev/device` # create ext4
+* `mkswap /dev/device` # create swap
 
-* Fstab: `UUID=xxxx /data xfs defaults 0 0` # persistent mount
+#### Mounting
 
-* Swap: `swapon /dev/device`, `swapoff /dev/device`
+* `mount /dev/device /mnt/point` # mount device
+* `umount /mnt/point` # unmount
+* `/etc/fstab`: `UUID=xxxx /data xfs defaults 0 0` # persistent mount
+* `swapon /dev/device` # enable swap
+* `swapoff /dev/device` # disable swap
 
-* NFS client: `mount -t nfs server:/export /mnt` # manual mount
+#### NFS Client
 
-* AutoFS: edit `/etc/auto.master`, `/etc/auto.misc` # automount
+* `mount -t nfs server:/export /mnt` # mount NFS
+
+#### AutoFS
+
+* Edit `/etc/auto.master`, `/etc/auto.misc` # configure automount
 
 ---
 
 ### **5. System Deployment & Maintenance**
 
-* Install pkg: `dnf install pkg` # install package
+#### DNF
 
-* Remove pkg: `dnf remove pkg` # uninstall
+* `dnf install pkg` # install
+* `dnf remove pkg` # uninstall
+* `dnf search keyword` # search
+* `dnf info pkg` # info
+* `dnf provides /path/file` # find package
+* `dnf repolist` # list repos
+* `dnf module list` # list modules
+* `dnf module install name:stream` # install module
+* `dnf history undo <id>` # rollback
 
-* Search pkg: `dnf search keyword` # find
+#### Scheduling
 
-* Info: `dnf info pkg` # details
+* `crontab -e` # edit cron
+* `*/15 * * * * echo hi >> /tmp/log` # run every 15 min
 
-* File provider: `dnf provides /path/file` # which pkg owns file
+#### Time Service
 
-* Repos: `dnf repolist`
-
-* Modules: `dnf module list`, `dnf module install name:stream`
-
-* Rollback: `dnf history undo <id>` # revert transaction
-
-* Cron edit: `crontab -e` # edit jobs
-
-* Cron format: `min hour dom mon dow cmd` # schedule
-
-* Cron example: `*/15 * * * * echo hi >> /tmp/log`
-
-* Time check: `timedatectl` # show time
-
-* Timezone: `timedatectl set-timezone Europe/Budapest`
-
-* Enable NTP: `timedatectl set-ntp true`
-
-* Service: `systemctl enable --now chronyd`
+* `timedatectl` # show time
+* `timedatectl set-timezone Europe/Budapest` # set timezone
+* `timedatectl set-ntp true` # enable NTP
+* `systemctl enable --now chronyd` # enable chrony
 
 ---
 
 ### **6. Networking**
 
-* Devices: `nmcli device status` # show NICs
+#### nmcli
 
-* Connections: `nmcli connection show` # list configs
+* `nmcli device status` # NICs
+* `nmcli connection show` # list connections
+* `nmcli connection add con-name static ifname enp1s0 type ethernet ip4 192.168.1.10/24 gw4 192.168.1.1` # add static
+* `nmcli con mod enp1s0 ipv4.dns 8.8.8.8 ipv4.method manual` # add DNS
+* `nmcli con up enp1s0` # bring up
 
-* Add static: `nmcli connection add con-name static ifname enp1s0 type ethernet ip4 192.168.1.10/24 gw4 192.168.1.1`
+#### Hostname
 
-* DNS: `nmcli con mod enp1s0 ipv4.dns 8.8.8.8 ipv4.method manual`
+* `hostnamectl set-hostname server1.example.com` # set hostname
+* `/etc/hosts` # local mapping
 
-* Bring up: `nmcli con up enp1s0`
+#### firewalld
 
-* Hostname: `hostnamectl set-hostname server1.example.com`
-
-* Hosts file: `/etc/hosts` # local name mapping
-
-* Firewalld zones: `firewall-cmd --get-active-zones`
-
-* List rules: `firewall-cmd --list-all`
-
-* Add service: `firewall-cmd --add-service=http --permanent`
-
-* Add port: `firewall-cmd --add-port=8080/tcp --permanent`
-
-* Assign iface: `firewall-cmd --change-interface=eth0 --zone=public --permanent`
-
-* Rich rule: `firewall-cmd --add-rich-rule='rule family="ipv4" source address="192.168.1.0/24" service name="http" accept' --permanent`
-
-* Reload: `firewall-cmd --reload`
+* `firewall-cmd --get-active-zones` # active zones
+* `firewall-cmd --list-all` # list rules
+* `firewall-cmd --add-service=http --permanent` # add http
+* `firewall-cmd --add-port=8080/tcp --permanent` # add port
+* `firewall-cmd --change-interface=eth0 --zone=public --permanent` # move iface
+* `firewall-cmd --add-rich-rule='rule family="ipv4" source address="192.168.1.0/24" service name="http" accept' --permanent` # rich rule
+* `firewall-cmd --reload` # reload rules
 
 ---
 
 ### **7. Users & Groups**
 
-* Add user: `useradd bob`
+#### Users
 
-* Add sudo: `usermod -aG wheel bob`
+* `useradd bob` # add user
+* `usermod -aG wheel bob` # add to sudo
+* `userdel -r bob` # remove user
+* `passwd bob` # set password
+* `chage -l bob` # show password aging
 
-* Remove user: `userdel -r bob`
+#### Groups
 
-* Set password: `passwd bob`
+* `groupadd developers` # add group
+* `groupdel developers` # delete group
+* `gpasswd -a user group` # add user to group
+* `gpasswd -d user group` # remove user from group
 
-* Password aging: `chage -l bob` # list settings
+#### Sudo
 
-* Add group: `groupadd developers`
-
-* Remove group: `groupdel developers`
-
-* Add to group: `gpasswd -a user group`
-
-* Remove from group: `gpasswd -d user group`
-
-* Edit sudoers: `visudo` # safe edit
+* `visudo` # edit sudoers
 
 ---
 
 ### **8. Security**
 
-* SELinux status: `getenforce`, `sestatus`
+#### SELinux
 
-* Enforce mode: `setenforce 1|0` # on/off
+* `getenforce` # current mode
+* `sestatus` # status
+* `setenforce 1|0` # set enforce
+* `/etc/selinux/config` # config file
+* `ls -Z` # list contexts
+* `restorecon -Rv /path` # restore context
+* `getsebool -a` # list booleans
+* `setsebool -P boolean on` # set boolean
+* `semanage fcontext -a -t httpd_sys_content_t "/srv/web(/.*)?"` # label dir
+* `restorecon -Rv /srv/web` # apply context
+* `ausearch -m avc -ts recent` # search AVC
+* `sealert -a /var/log/audit/audit.log` # analyze audit
 
-* Config file: `/etc/selinux/config`
+#### SSH Keys
 
-* Contexts: `ls -Z`, `restorecon -Rv /path` # list, restore
+* `ssh-keygen` # generate keys
+* `ssh-copy-id user@server` # copy keys
 
-* Booleans: `getsebool -a`, `setsebool -P boolean on` # check/set
+#### ACLs
 
-* Custom dir: `semanage fcontext -a -t httpd_sys_content_t "/srv/web(/.*)?"`, `restorecon -Rv /srv/web`
-
-* Audit logs: `ausearch -m avc -ts recent`, `sealert -a /var/log/audit/audit.log`
-
-* SSH keys: `ssh-keygen`, `ssh-copy-id user@server`
-
-* ACLs: `setfacl -m u:user:rw- file`, `getfacl file`, `setfacl -x u:user file`
+* `setfacl -m u:user:rw- file` # set user acl
+* `getfacl file` # view ACL
+* `setfacl -x u:user file` # remove user ACL
 
 ---
 
 ### **9. Containers (Podman)**
 
-* Search image: `podman search ubi9`
+#### Image Management
 
-* Pull image: `podman pull ubi9/ubi-minimal`
+* `podman search ubi9` # search image
+* `podman pull ubi9/ubi-minimal` # pull image
+* `podman images` # list images
+* `podman inspect image` # inspect image
+* `podman rmi image` # remove image
 
-* List images: `podman images`
+#### Container Lifecycle
 
-* Inspect: `podman inspect image`
+* `podman run -d --name myapp -p 8080:80 image` # run container
+* `podman ps -a` # list containers
+* `podman stop container` # stop
+* `podman start container` # start
+* `podman rm container` # remove
+* `podman exec -it container bash` # shell inside
 
-* Remove image: `podman rmi image`
+#### Persistent Storage
 
-* Run container: `podman run -d --name myapp -p 8080:80 image`
+* `podman run -v /host/path:/container/path:Z image` # bind mount volume
 
-* List containers: `podman ps -a`
+#### systemd Service
 
-* Start/stop: `podman start|stop container`
-
-* Remove: `podman rm container`
-
-* Exec shell: `podman exec -it container bash` # open shell inside
-
-* Volumes: `podman run -v /host/path:/cont/path:Z image`
-
-* Systemd service: `podman generate systemd --name myapp > /etc/systemd/system/container-myapp.service`, then `systemctl daemon-reload && systemctl enable --now container-myapp.service`
+* `podman generate systemd --name myapp > /etc/systemd/system/container-myapp.service` # gen unit
+* `systemctl daemon-reload` # reload units
+* `systemctl enable --now container-myapp.service` # enable service
