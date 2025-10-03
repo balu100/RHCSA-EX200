@@ -138,26 +138,13 @@
 * `partprobe` # reload partition table
 
 #### LVM
+* `pvcreate /dev/sdb1 /dev/sdc1` # init PVs  
+* `vgcreate my_vg /dev/sdb1 /dev/sdc1` # create VG from PVs  
+* `lvcreate -n my_lv -L 10G my_vg` # new LV  
+* `lvextend -r -L +5G /dev/my_vg/my_lv` # extend LV + FS (ext4/XFS)  
+* Shrink ext4: `umount`, `e2fsck -f`, `resize2fs <smaller>`, `lvreduce -L <smaller>`, `e2fsck`, `mount`  
+* Show: `pvs` # PVs, `vgs` # VGs, `lvs` # LVs, `lsblk -f` # all block/FS  
 
-* Create PVs: `pvcreate /dev/sdb1 /dev/sdc1` # init multiple partitions  
-* Create VG: `vgcreate my_vg /dev/sdb1 /dev/sdc1` # group PVs into VG  
-* Create LV: `lvcreate -n my_lv -L 10G my_vg` # carve LV from VG  
-
-* Extend LV + FS: `lvextend -r -L +5G /dev/my_vg/my_lv` # grow LV + FS (ext4/XFS)  
-  - Alt: `lvextend -L +5G /dev/my_vg/my_lv` then `resize2fs` (ext4) or `xfs_growfs /mnt`  
-
-* Shrink LV (⚠ ext4 only):  
-  - `umount /dev/my_vg/my_lv`  
-  - `e2fsck -f /dev/my_vg/my_lv`  
-  - `resize2fs /dev/my_vg/my_lv <smaller>`  
-  - `lvreduce -L <smaller> /dev/my_vg/my_lv`  
-  - `e2fsck -f /dev/my_vg/my_lv`, `mount`  
-
-* Display info:  
-  - `pvs` # PVs with size/free  
-  - `vgs` # VG summary  
-  - `lvs` # LV list  
-  - `lsblk -f` # block + FS mapping  
 
 #### VDO
 
