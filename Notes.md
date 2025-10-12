@@ -503,3 +503,84 @@ lvextend -r -L +2G /dev/vgdata/lvlogs
 - Ensure fstab uses **UUID**.  
 - Verify free extents: `vgs -o +vg_free`; mapping: `lvs -o +devices`.
 
+
+
+---
+
+# Easy defaults (exam speed mode)
+
+### Networking — use `nmtui`
+```
+nmtui
+# Edit connection → IPv4 Automatic (DHCP) or Manual (addr/prefix/gateway)
+# Add DNS (e.g., 1.1.1.1 8.8.8.8)
+# Activate connection, optionally Set system hostname
+```
+Quick checks: `ip a`, `ip r`, `ping -c2 1.1.1.1`, `ping -c2 example.com`.
+
+### Firewall — open the port, reload
+```
+firewall-cmd --add-port=80/tcp --permanent
+firewall-cmd --add-port=8080/tcp --permanent
+firewall-cmd --add-service=nfs --permanent   # when using NFS/autofs
+firewall-cmd --reload
+```
+If a service exists, you can use `--add-service=<name>`; ports always work.
+
+### SELinux — minimal fixes
+```
+restorecon -Rv /PATH
+setsebool -P httpd_can_network_connect on     # common web/network need
+# For Podman bind mounts add :Z
+#   -v /srv/nginx/html:/usr/share/nginx/html:Z
+```
+
+### Autofs — one recipe (direct map)
+```
+dnf -y install autofs nfs-utils
+printf '/- /etc/auto.direct
+' > /etc/auto.master.d/direct.autofs
+printf '/mnt/docs  -rw  NFS_SERVER:/srv/share/docs
+' > /etc/auto.direct
+systemctl enable --now autofs
+ls /mnt/docs && mount | grep /mnt/docs
+```
+Use direct map for exact paths. Indirect maps are optional.
+
+### Find & Copy — prefer rsync include tree
+```
+rsync -aR --include='*.conf' --exclude='*' /src/ /dest/
+# Preview: rsync -anR ...
+```
+
+### LVM — mnemonic: PV → VG → LV → FS → mount → fstab
+```
+pvcreate /dev/sdb
+vgcreate vgdata /dev/sdb
+lvcreate -n lvdata -L 5G vgdata
+mkfs.xfs /dev/vgdata/lvdata
+mkdir -p /data
+UUID=$(blkid -s UUID -o value /dev/vgdata/lvdata)
+echo "UUID=$UUID /data xfs defaults 0 0" >> /etc/fstab
+mount -a && lsblk -f | grep /data
+```
+Grow fast:
+```
+lvextend -r -L +2G /dev/vgdata/lvdata
+```
+
+### Containers (Podman) — shortest persistent web
+```
+podman run -d --name web -p 8080:80 \
+  -v /srv/nginx/html:/usr/share/nginx/html:Z docker.io/library/nginx:alpine
+podman generate systemd --name web --files --new
+mv container-web.service /etc/systemd/system/
+systemctl enable --now container-web
+```
+
+### Common service checks
+```
+systemctl status <name> --no-pager
+ss -tulpen | grep -E ':80|:8080|:2049'
+```
+
