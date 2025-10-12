@@ -440,3 +440,66 @@ umask 027
 
 Then re-login or `source ~/.bash_profile`.
 
+
+
+---
+
+### Q6 — Autofs: master map explained (why it exists)
+- **Master map** tells `automount` *where to watch* and *which child map to use*.
+  - Files: `/etc/auto.master` and drop-ins `/etc/auto.master.d/*.autofs`.
+  - Syntax: `<mountpoint>  <mapfile>  [options]`.
+- **Indirect map** (common): attaches submounts under a base dir.
+  - Master: `/NFS  /etc/auto.nfs  --timeout=60`
+  - Map `/etc/auto.nfs`:
+    ```
+    docs  -ro    NFS_SERVER:/srv/share/docs   # becomes /NFS/docs on access
+    iso   -rw    NFS_SERVER:/srv/iso
+    ```
+- **Direct map**: mounts exact paths anywhere via `/-`.
+  - Master: `/-  /etc/auto.direct  --timeout=60`
+  - Map `/etc/auto.direct`:
+    ```
+    /mnt/docs   -rw,soft    NFS_SERVER:/srv/share/docs
+    /srv/iso    -ro         NFS_SERVER:/srv/iso
+    ```
+- **Why Autofs vs fstab** ✔ on‑demand mount, ✔ auto‑unmount idle, ✔ faster boot if server is down, ✔ per‑map options. ⚠ Needs `autofs` service.
+
+---
+
+### Q19 — LVM: PV → VG → LV create path (clarified)
+**Mental model**: **PV**=disks/partitions, **VG**=pool, **LV**=virtual disk (format and mount).
+
+**Shortest full example (use whole disk)**
+```bash
+DSK=/dev/sdb
+pvcreate $DSK                  # make a PV on the disk
+vgcreate vgdata $DSK           # create pool
+lvcreate -n lvlogs -L 4G vgdata
+mkfs.xfs /dev/vgdata/lvlogs
+mkdir -p /logs
+UUID=$(blkid -s UUID -o value /dev/vgdata/lvlogs)
+echo "UUID=$UUID  /logs  xfs  defaults  0 0" >> /etc/fstab
+mount -a && lsblk -f | grep logs
+```
+
+**If you need a partitioned disk** (GPT + LVM flag)
+```bash
+parted -s /dev/sdb mklabel gpt mkpart primary 1MiB 100% set 1 lvm on
+pvcreate /dev/sdb1
+vgcreate vgdata /dev/sdb1
+# then same as above
+```
+
+**Grow later**
+```bash
+# add disk and extend pool
+pvcreate /dev/sdc; vgextend vgdata /dev/sdc
+# extend LV and filesystem online (XFS)
+lvextend -r -L +2G /dev/vgdata/lvlogs
+```
+
+**Pitfalls**
+- XFS cannot shrink (use ext4 for shrink tasks).  
+- Ensure fstab uses **UUID**.  
+- Verify free extents: `vgs -o +vg_free`; mapping: `lvs -o +devices`.
+
