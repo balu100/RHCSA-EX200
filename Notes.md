@@ -1,9 +1,21 @@
-# GLANCE LEGEND:
-# [CHOOSE] you decide value        [COMMON] typical default        [MUST] required syntax/behavior
-# [EASIER] shortest RHCSA-OK form  [ALT] acceptable alternative
+# RHCSA Quick‑Glance Cheatsheet
 
-# ──────────────────────────────── AUTOFS ─────────────────────────────────
+> Minimal commands and config snippets in a **quick‑scan** format. Copy/paste friendly for exam practice.
 
+---
+
+## GLANCE LEGEND
+
+```text
+[CHOOSE] you decide value        [COMMON] typical default        [MUST] required syntax/behavior
+[EASIER] shortest RHCSA-OK form  [ALT] acceptable alternative
+```
+
+---
+
+## AutoFS
+
+```bash
 # /etc/auto.master
 /automount  /etc/auto.automount  --timeout=30
 # /automount          [CHOOSE] parent mount root
@@ -18,12 +30,16 @@ public  -ro,sync  nfs.lab.com:/public
 # :/public      [CHOOSE] exported path on server
 
 # Result: touching /automount/public triggers mount; unmount after timeout.
+```
 
-# ───────────────────────────────── ACLs ────────────────────────────────────
+---
 
+## ACLs
+
+```bash
 # View
-ls -lahi                      # [MUST] always your quick view
-getfacl FILE_OR_DIR           # [MUST] show ACLs
+ls -lahi                      # [MUST] quick view
+getfacl FILE_OR_DIR          # [MUST] show ACLs
 
 # Grant user / group
 setfacl -m u:harry:rwx  /data/file.txt   # [EASIER]
@@ -39,9 +55,13 @@ setfacl -m d:u:harry:rw /shared
 
 # Copy ACLs
 getfacl source | setfacl --set-file=- target
+```
 
-# ───────────────────────────────── LVM ─────────────────────────────────────
+---
 
+## LVM
+
+```bash
 # CHOOSE disk layout (both valid on RHCSA)
 
 # No partitioning  [EASIER]
@@ -74,9 +94,13 @@ lvextend -r -l +100%FREE /dev/vgdata/lvdata
 pvs; vgs; lvs; lsblk
 
 # Notes: XFS grow only; ext4 grow online, shrink offline (rare on RHCSA).
+```
 
-# ─────────────────────────────── SELinux: semanage ─────────────────────────
+---
 
+## SELinux: `semanage`
+
+```bash
 # List known ports for a service type
 semanage port -l | grep http
 
@@ -92,29 +116,61 @@ semanage port -d -t http_port_t -p tcp 8081
 # Persistent file contexts
 semanage fcontext -a -t httpd_sys_content_t "/web(/.*)?"
 restorecon -Rv /web
+```
 
-# ───────────────────────────────── FIND (script-y tasks) ───────────────────
+---
 
+## find — RHCSA quick patterns
+
+````bash
+# Template
+find START [TESTS] -exec ACTION {} +          # [MUST] use + to batch
+
+# Copy owned-by user → keep tree + attrs (root FS only)
+find / -xdev -user USER -type f -exec cp --parents -a -t /DEST {} +   # [EASIER]
+# [CHOOSE] USER, DEST
+
+# Recent big logs → list or copy
+find /PATH -type f -name "*.log" -size +10M -mtime -7 -print          # [COMMON]
+# ALT copy: ... -exec cp -a -t /DEST {} +
+
+# Fix inaccessible dirs (000) so they can be entered
+find /PATH -type d -perm -000 -exec chmod o+x {} +                     # [EASIER]
+
+# SUID audit (often asked)
+find / -xdev -perm -4000 -type f -ls                                   # [COMMON]
+
+# Remove empties under a path
+find /PATH -empty -delete                                              # [ALT]
+```bash
 # Copy all files owned by user → to /opt/dir, keep structure and attrs
 find / -xdev -user harry -type f -exec cp --parents -a -t /opt/dir {} +   # [EASIER]
 
 # Common variants
 find /data -type f -size +10M -mtime -7 -name "*.log"
 find /var -type d -perm -000 -exec chmod o+x {} +
+````
 
-# ─────────────────────────────── Password aging ────────────────────────────
+---
 
+## Password aging
+
+```bash
 # /etc/login.defs (defaults for NEW users)
 PASS_MIN_DAYS 0
 PASS_MAX_DAYS 20
 PASS_WARN_AGE 7
-# [CHOOSE] numbers. Labels are fixed keywords. Applies to users created AFTER change.
+# [CHOOSE] numbers. Labels fixed. Applies to users created AFTER change.
 
-# Existing user (needed on exam often)
-chage -m 0 -M 20 -W 7 USER                                  # [EASIER]
+# Existing user (often needed)
+chage -m 0 -M 20 -W 7 USER   # [EASIER]
+```
 
-# ─────────────────────────────── DNF local repos ───────────────────────────
+---
 
+## DNF local repos
+
+```ini
 # /etc/yum.repos.d/dvd.repo
 [BaseOS]
 name=BaseOS
@@ -127,31 +183,46 @@ name=AppStream
 baseurl=http://domain.tld/x/AppStream
 enabled=1
 gpgcheck=0
-# [CHOOSE] section headers [BaseOS]/[AppStream] are conventional, not mandatory.
+# [CHOOSE] section headers are conventional, not mandatory.
 # [CHOOSE] name= is a label; baseurl must match your served path.
-# [CHOOSE] gpgcheck=0 only if no keys set; otherwise 1 + gpgkey=FILE/URL.
+# [CHOOSE] gpgcheck=0 only if no keys; otherwise 1 + gpgkey=FILE/URL.
+```
 
-# ─────────────────────────────── Packages + Chrony ─────────────────────────
+---
 
-dnf install -y policy* mod_ssl httpd mandb chrony tuned  # [EASIER]
-dnf install policy* autofs* lvm2* acl* httpd* mod_ssl* firewalld* chrony* tuned* podman* nfs* NetworkManager-tui* man*
+## Packages + Chrony
+
+```bash
+# EASIER installs (lean default)
+dnf install -y policy* mod_ssl httpd mandb chrony tuned
+
+# Optional bulk (only if task appears)
+dnf install -y autofs* lvm2* acl* firewalld* podman* nfs* NetworkManager-tui* man*
 
 # /etc/chrony.conf
 server 192.0.0.1 iburst     # [CHOOSE] server/pool; 'iburst' = fast initial sync
 # ALT: pool pool.ntp.org iburst
 # Check: systemctl enable --now chronyd; chronyc sources -v
+```
 
-# ─────────────────────────────── Podman → systemd ──────────────────────────
+---
 
+## Podman → systemd
+
+```bash
 podman generate systemd --new --files --name EXAMPLE1
 # Output .service in CWD → move:
 install -m 644 EXAMPLE1.service /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable --now EXAMPLE1
 # [CHOOSE] container name; flags fixed in meaning.
+```
 
-# ─────────────── DON'T FORGET: HELP QUICK-GLANCE ───────────────
+---
 
+## Help quick‑glance
+
+```bash
 man CMD                  # open manual
 man 5 crontab            # section hint: 1=cmds, 5=formats, 8=admin
 man -k KEYWORD           # search manuals by keyword
@@ -161,3 +232,4 @@ CMD --help               # builtin help
 dnf search KEYWORD       # find package by name/summary
 dnf provides '*/semanage'# which package ships a file/binary
 which CMD                # where the command resolves from
+```
