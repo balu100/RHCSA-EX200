@@ -208,6 +208,160 @@ systemctl enable --now EXAMPLE1
 
 ---
 
+## Firewall (firewalld)
+
+```bash
+systemctl enable --now firewalld
+firewall-cmd --add-service=http --permanent; firewall-cmd --reload   # by service name
+firewall-cmd --add-port=8081/tcp --permanent; firewall-cmd --reload  # any port if remembered
+firewall-cmd --list-all
+```
+
+---
+
+## Users + sudo
+
+```bash
+useradd -m USER
+echo 'USER:PASSWORD' | chpasswd
+usermod -aG wheel USER                           # sudo via wheel
+# ALT: dedicated rule
+printf 'USER ALL=(ALL) ALL
+' > /etc/sudoers.d/USER; chmod 440 /etc/sudoers.d/USER
+```
+
+---
+
+## SSH keys
+
+```bash
+ssh-keygen -t ed25519 -N '' -f ~/.ssh/id_ed25519
+ssh-copy-id USER@HOST
+```
+
+---
+
+## Journald persistence
+
+```bash
+mkdir -p /var/log/journal
+systemctl restart systemd-journald
+```
+
+---
+
+## Networking (TUI first)
+
+```bash
+nmtui                       # set IP, GW, DNS, hostname; activate
+nmcli con up "PROFILE"      # ensure connection is up
+```
+
+---
+
+## Storage extras
+
+```bash
+# UUID mount quick
+UUID=$(blkid -s UUID -o value /dev/vgdata/lvdata); echo "UUID=$UUID /data xfs defaults 0 0" >> /etc/fstab; mount -a
+
+# VFAT filesystem
+mkfs.vfat -F32 /dev/sdb1
+mkdir -p /mnt/vfat; mount /dev/sdb1 /mnt/vfat
+echo '/dev/sdb1 /mnt/vfat vfat defaults 0 0' >> /etc/fstab
+
+# Swap file
+fallocate -l 600M /swapfile; chmod 600 /swapfile; mkswap /swapfile; swapon /swapfile
+echo '/swapfile swap swap defaults 0 0' >> /etc/fstab
+```
+
+---
+
+## Boot target
+
+```bash
+systemctl set-default multi-user.target    # text mode
+# ALT: graphical.target
+```
+
+---
+
+## Archiving
+
+```bash
+tar czf out.tgz DIR
+tar xzf file.tgz -C /dest
+```
+
+---
+
+## Cron / at
+
+```bash
+# Cron
+crontab -u USER -e             # edit; e.g.: 23 14 * * * /usr/bin/echo hi
+
+# at (one-shot)
+echo '/usr/bin/echo hi' | at 14:23
+atq; atrm ID
+```
+
+---
+
+## NFS quick client / simple export
+
+```bash
+# Client mount
+mkdir -p /mnt/nfs; mount -t nfs HOST:/share /mnt/nfs
+
+# Quick server export (hacky but works if needed)
+echo '/share *(rw,no_root_squash)' >> /etc/exports
+systemctl enable --now nfs-server
+exportfs -r; showmount -e localhost
+```
+
+---
+
+## Shared directory bits (SGID + sticky)
+
+```bash
+mkdir -p /common/admin
+chgrp admin /common/admin
+chmod 2770 /common/admin     # SGID for group inheritance
+chmod +t  /common/admin      # sticky (only owners can delete)
+```
+
+---
+
+## ISO loop mount
+
+```bash
+mkdir -p /mnt/iso
+mount -o loop /root/file.iso /mnt/iso
+# fstab (optional)
+echo '/root/file.iso /mnt/iso iso9660 loop 0 0' >> /etc/fstab
+```
+
+---
+
+## Containers quick run (Podman)
+
+```bash
+podman run -d --name web -p 8080:80 \
+  -v /web:/usr/share/nginx/html:ro,Z docker.io/library/nginx:alpine
+podman ps; podman stop web; podman rm web
+```
+
+---
+
+## SELinux boolean (common)
+
+```bash
+setsebool -P httpd_can_network_connect on
+```
+
+---
+
 ## Help quick‑glance
 
 ```bash
