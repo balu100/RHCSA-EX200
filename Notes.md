@@ -2,7 +2,7 @@
 # [CHOOSE] you decide value        [COMMON] typical default        [MUST] required syntax/behavior
 # [EASIER] shortest RHCSA-OK form  [ALT] acceptable alternative
 
-# ───────────────────────────────── AUTOF S ─────────────────────────────────
+# ──────────────────────────────── AUTOFS ─────────────────────────────────
 
 # /etc/auto.master
 /automount  /etc/auto.automount  --timeout=30
@@ -23,7 +23,7 @@ public  -ro,sync  nfs.lab.com:/public
 
 # View
 ls -lahi                      # [MUST] always your quick view
-getfacl FILE_OR_DIR          # [MUST] show ACLs
+getfacl FILE_OR_DIR           # [MUST] show ACLs
 
 # Grant user / group
 setfacl -m u:harry:rwx  /data/file.txt   # [EASIER]
@@ -32,7 +32,7 @@ setfacl -m g:devs:rx    /data            # [EASIER]
 
 # Remove / reset
 setfacl -x u:harry /data/file.txt        # remove entry
-setfacl -b          /data/file.txt        # wipe all ACLs
+setfacl -b          /data/file.txt       # wipe all ACLs
 
 # Default ACLs on a dir (inherit to new files/dirs)
 setfacl -m d:u:harry:rw /shared
@@ -74,7 +74,6 @@ lvextend -r -l +100%FREE /dev/vgdata/lvdata
 pvs; vgs; lvs; lsblk
 
 # Notes: XFS grow only; ext4 grow online, shrink offline (rare on RHCSA).
-
 
 # ─────────────────────────────── SELinux: semanage ─────────────────────────
 
@@ -135,9 +134,7 @@ gpgcheck=0
 # ─────────────────────────────── Packages + Chrony ─────────────────────────
 
 dnf install -y policy* mod_ssl httpd mandb chrony tuned  # [EASIER]
-
 dnf install policy* autofs* lvm2* acl* httpd* mod_ssl* firewalld* chrony* tuned* podman* nfs* NetworkManager-tui* man*
-
 
 # /etc/chrony.conf
 server 192.0.0.1 iburst     # [CHOOSE] server/pool; 'iburst' = fast initial sync
