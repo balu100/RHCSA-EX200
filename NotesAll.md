@@ -1,6 +1,10 @@
-# RHCSA Dump → Combined Quick‑Glance Patterns
+# RHCSA Quick‑Glance Cheatsheet
 
-One canonical example per recurring task, in the same **quick‑scan** style. Adjust only the **[CHOOSE]** parts.
+> Minimal commands and config snippets in a **quick‑scan** format. Copy/paste friendly for exam practice.
+
+---
+
+## GLANCE LEGEND
 
 ```text
 [CHOOSE] you decide value        [COMMON] typical default        [MUST] required syntax/behavior
@@ -9,201 +13,197 @@ One canonical example per recurring task, in the same **quick‑scan** style. Ad
 
 ---
 
-## Cron — daily at exact time
-
-```bash
-# For USER at 14:23 every day
-crontab -u USER -e
-23 14 * * * /bin/echo "Hello"
-# [COMMON] service ensure
-systemctl enable --now crond
-```
-
----
-
-## DNF repo — BaseOS + AppStream (HTTP)
-
-```ini
-# /etc/yum.repos.d/local.repo
-[BaseOS]
-name=BaseOS
-baseurl=http://HOST/x/BaseOS
-enabled=1
-gpgcheck=0
-[AppStream]
-name=AppStream
-baseurl=http://HOST/x/AppStream
-enabled=1
-gpgcheck=0
-```
-
----
-
-## Find & copy files owned by user
-
-```bash
-# Copy owned-by USER → /opt/dir, keep tree + attrs, stay on root FS
-mkdir -p /opt/dir
-find / -xdev -user USER -type f -exec cp --parents -a -t /opt/dir {} +   # [EASIER]
-# ALT (slower, per-file): ... -exec cp -a {} /opt/dir \;
-```
-
----
-
-## LVM — create minimal LV, mount, extend
-
-```bash
-# No partitioning  [EASIER]
-pvcreate /dev/sdb
-vgcreate vgdata /dev/sdb
-lvcreate -n lvdata -L 2G vgdata
-mkfs.xfs /dev/vgdata/lvdata
-mkdir -p /data
-mount /dev/vgdata/lvdata /data
-echo '/dev/vgdata/lvdata /data xfs defaults 0 0' >> /etc/fstab
-
-# Online grow (any FS that supports online grow: XFS/ext4)
-lvextend -r -L +5G /dev/vgdata/lvdata
-```
-
----
-
-## LVM — specific PE size + extents
-
-```bash
-# 16M PE, LV of 50 extents (50×16M = 800M)
-pvcreate /dev/sdc
-vgcreate -s 16M vg1 /dev/sdc
-lvcreate -l 50 -n lv1 vg1
-mkfs.ext4 /dev/vg1/lv1
-mkdir -p /mnt/data
-echo '/dev/vg1/lv1 /mnt/data ext4 defaults 0 0' >> /etc/fstab && mount -a
-```
-
----
-
-## Mount ISO permanently
-
-```bash
-mkdir -p /mnt/iso
-echo '/root/exam.iso  /mnt/iso  iso9660  loop  0 0' >> /etc/fstab
-mount -a
-```
-
----
-
-## Swap — file (fastest) and partition (ALT)
-
-```bash
-# File swap 600M  [EASIER]
-fallocate -l 600M /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=600
-chmod 600 /swapfile && mkswap /swapfile
-echo '/swapfile swap swap defaults 0 0' >> /etc/fstab
-swapon -a
-
-# ALT partition swap (assume /dev/vdb2)
-mkswap /dev/vdb2
-echo '/dev/vdb2 swap swap defaults 0 0' >> /etc/fstab && swapon -a
-```
-
----
-
-## Directory with group RW + SGID
-
-```bash
-# /home/admins: group=admin, rwx for owner+group, none for others, force group inheritance
-mkdir -p /home/admins
-chgrp admin /home/admins
-chmod 2770 /home/admins       # 2 = SGID
-```
-
----
-
-## Users & groups (common combos)
-
-```bash
-groupadd admin
-useradd -G admin natasha
-useradd -G admin harry
-useradd -s /sbin/nologin sarah
-for u in natasha harry sarah; do echo password | passwd --stdin "$u"; done   # [EASIER]
-
-# Specific UID example
-useradd -u 3400 alex && echo redhat | passwd --stdin alex
-```
-
----
-
-## AutoFS — simple NFS map
+## AutoFS
 
 ```bash
 # /etc/auto.master
 /automount  /etc/auto.automount  --timeout=30
+# /automount          [CHOOSE] parent mount root
+# /etc/auto.automount [CHOOSE] map file path
+# --timeout=30        [CHOOSE] idle unmount seconds (COMMON: 300)
 
 # /etc/auto.automount
-public  -rw,soft  nfs.example.com:/export/public
+public  -ro,sync  nfs.lab.com:/public
+# public        [CHOOSE] subdir name → becomes /automount/public
+# -ro,sync      [CHOOSE] mount opts (ALT: -rw,soft / -rw,hard / -nosuid / -noexec)
+# nfs.lab.com   [CHOOSE] server FQDN/IP
+# :/public      [CHOOSE] exported path on server
 
-systemctl enable --now autofs
-# Access: /automount/public
+# Result: touching /automount/public triggers mount; unmount after timeout.
 ```
 
 ---
 
-## SELinux — allow nonstandard HTTP port + content label
+## ACLs
 
 ```bash
-semanage port -a -t http_port_t -p tcp 8081
+# View
+ls -lahi                      # [MUST] quick view
+getfacl FILE_OR_DIR          # [MUST] show ACLs
+
+# Grant user / group
+setfacl -m u:harry:rwx  /data/file.txt   # [EASIER]
+setfacl -m g:devs:rx    /data            # [EASIER]
+# PERMS = r,w,x → combine as rwx / r-x / rw- / r--
+
+# Remove / reset
+setfacl -x u:harry /data/file.txt        # remove entry
+setfacl -b          /data/file.txt       # wipe all ACLs
+
+# Default ACLs on a dir (inherit to new files/dirs)
+setfacl -m d:u:harry:rw /shared
+
+# Copy ACLs
+getfacl source | setfacl --set-file=- target
+```
+
+---
+
+## LVM
+
+```bash
+# CHOOSE disk layout (both valid on RHCSA)
+
+# No partitioning  [EASIER]
+pvcreate /dev/sdb
+vgcreate vgdata /dev/sdb
+lvcreate -n lvdata -L 2G vgdata
+
+# With partitioning  [ALT]
+cfdisk /dev/sdb      # make sdb1 = Linux LVM (8e00), write, quit
+pvcreate /dev/sdb1
+vgcreate vgdata /dev/sdb1
+lvcreate -n lvdata -L 2G vgdata
+
+# Filesystem + mount
+mkfs.xfs /dev/vgdata/lvdata                        # [CHOOSE] FS (ALT: mkfs.ext4 …)
+mkdir -p /data
+mount /dev/vgdata/lvdata /data
+echo '/dev/vgdata/lvdata /data xfs defaults 0 0' >> /etc/fstab   # [ALT]: use UUID=
+
+# Online extend LV + filesystem in one step (ext4 or XFS)
+lvextend -r -L +500M /dev/vgdata/lvdata            # -r auto-runs xfs_growfs/resize2fs
+# [TIP] -L = absolute size;  -l = extents/percent (e.g., -l +100%FREE)
+
+# Add a new disk → grow VG → extend LV
+pvcreate /dev/sdd
+vgextend vgdata /dev/sdd
+lvextend -r -l +100%FREE /dev/vgdata/lvdata
+
+# Inspect
+pvs; vgs; lvs; lsblk
+
+# Notes: XFS grow only; ext4 grow online, shrink offline (rare on RHCSA).
+```
+
+---
+
+## SELinux: `semanage`
+
+```bash
+# List known ports for a service type
+semanage port -l | grep http
+
+# Allow nonstandard port
+semanage port -a -t http_port_t -p tcp 8081         # [EASIER]
+# [CHOOSE] type: http_port_t / ssh_port_t / dns_port_t …
+# [CHOOSE] proto: tcp|udp  [CHOOSE] port: number
+
+# Modify / delete
+semanage port -m -t http_port_t -p tcp 8081
+semanage port -d -t http_port_t -p tcp 8081
+
+# Persistent file contexts
 semanage fcontext -a -t httpd_sys_content_t "/web(/.*)?"
 restorecon -Rv /web
 ```
 
 ---
 
-## Chrony — simple source
+## find — RHCSA quick patterns
 
 ```bash
-# /etc/chrony.conf (append one line)
-server 192.0.2.1 iburst
-systemctl enable --now chronyd
+# Copy files owned by USER to /DEST (flat dest)  [EASIER memory]
+find / -xdev -user USER -type f -exec cp -a {} /DEST \;
+
+# Keep directory tree + attrs (if task requires original paths)
+find / -xdev -user USER -type f -exec cp --parents -a -t /DEST {} +
+
+# Recent big logs → list
+find /PATH -type f -name "*.log" -size +10M -mtime -7 -print
+
+# Fix dirs with 000 perms so they’re enterable
+find /PATH -type d -perm -000 -exec chmod o+x {} +
+
+# SUID audit (common)
+find / -xdev -perm -4000 -type f -ls
 ```
 
 ---
 
-## Firewall — common services
+## Password aging
 
 ```bash
-firewall-cmd --add-service={ssh,http,https} --permanent
-firewall-cmd --reload
+# /etc/login.defs (defaults for NEW users)
+PASS_MIN_DAYS 0
+PASS_MAX_DAYS 20
+PASS_WARN_AGE 7
+# [CHOOSE] numbers. Labels fixed. Applies to users created AFTER change.
+
+# Existing user (often needed)
+chage -m 0 -M 20 -W 7 USER   # [EASIER]
 ```
 
 ---
 
-## IP forwarding (router task)
+## DNF local repos
 
-```bash
-sysctl -w net.ipv4.ip_forward=1
-printf 'net.ipv4.ip_forward=1\n' >/etc/sysctl.d/99-router.conf
+```ini
+# /etc/yum.repos.d/dvd.repo
+[BaseOS]
+name=BaseOS
+baseurl=http://domain.tld/x/BaseOS
+enabled=1
+gpgcheck=0
+
+[AppStream]
+name=AppStream
+baseurl=http://domain.tld/x/AppStream
+enabled=1
+gpgcheck=0
+# [CHOOSE] section headers are conventional, not mandatory.
+# [CHOOSE] name= is a label; baseurl must match your served path.
+# [CHOOSE] gpgcheck=0 only if no keys; otherwise 1 + gpgkey=FILE/URL.
 ```
 
 ---
 
-## Kernel update (keep old kernel)
+## Packages + Chrony
 
 ```bash
-dnf update -y kernel
-# New kernel becomes default automatically on RHEL/Rocky 9
+# EASIER installs (lean default)
+dnf install -y policy* mod_ssl httpd mandb chrony tuned
+
+# Optional bulk (only if task appears)
+dnf install -y autofs* lvm2* acl* firewalld* podman* nfs* NetworkManager-tui* man*
+
+# /etc/chrony.conf
+server 192.0.0.1 iburst     # [CHOOSE] server/pool; 'iburst' = fast initial sync
+# ALT: pool pool.ntp.org iburst
+# Check: systemctl enable --now chronyd; chronyc sources -v
 ```
 
 ---
 
-## "Install everything needed" — lean default + add‑ons
+## Podman → systemd
 
 ```bash
-# Lean default (covers most tasks)
-dnf install -y policy* mod_ssl httpd mandb
-
-# Add‑ons when needed
-dnf install -y autofs* lvm2* acl* firewalld* chrony* podman* nfs* NetworkManager-tui*
+podman generate systemd --new --files --name EXAMPLE1
+# Output .service in CWD → move:
+install -m 644 EXAMPLE1.service /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now EXAMPLE1
+# [CHOOSE] container name; flags fixed in meaning.
 ```
 
 ---
@@ -211,8 +211,13 @@ dnf install -y autofs* lvm2* acl* firewalld* chrony* podman* nfs* NetworkManager
 ## Help quick‑glance
 
 ```bash
-man CMD          # manual
-man -k WORD      # keyword search
-CMD --help       # quick usage
-dnf search WORD  # package search
+man CMD                  # open manual
+man 5 crontab            # section hint: 1=cmds, 5=formats, 8=admin
+man -k KEYWORD           # search manuals by keyword
+whatis CMD               # one-line summary
+CMD --help               # builtin help
+
+dnf search KEYWORD       # find package by name/summary
+dnf provides '*/semanage'# which package ships a file/binary
+which CMD                # where the command resolves from
 ```
