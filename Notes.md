@@ -1,235 +1,134 @@
-# RHCSA Quick‑Glance Cheatsheet
+## SELinux and semanage
 
-> Minimal commands and config snippets in a **quick‑scan** format. Copy/paste friendly for exam practice.
-
----
-
-## GLANCE LEGEND
-
-```text
-[CHOOSE] you decide value        [COMMON] typical default        [MUST] required syntax/behavior
-[EASIER] shortest RHCSA-OK form  [ALT] acceptable alternative
+```
+semanage port -a -t http_port_t -p tcp 85
+man semanage /examples
 ```
 
 ---
 
-## AutoFS
+## Podman and Systemd Integration
 
-```bash
-# /etc/auto.master
-/automount  /etc/auto.automount  --timeout=30
-# /automount          [CHOOSE] parent mount root
-# /etc/auto.automount [CHOOSE] map file path
-# --timeout=30        [CHOOSE] idle unmount seconds (COMMON: 300)
+```
+podman image build -t randomtag -f http://repo.podman.home/container
 
-# /etc/auto.automount
-public  -ro,sync  nfs.lab.com:/public
-# public        [CHOOSE] subdir name → becomes /automount/public
-# -ro,sync      [CHOOSE] mount opts (ALT: -rw,soft / -rw,hard / -nosuid / -noexec)
-# nfs.lab.com   [CHOOSE] server FQDN/IP
-# :/public      [CHOOSE] exported path on server
-
-# Result: touching /automount/public triggers mount; unmount after timeout.
+podman generate systemd --new --files --name web.service
+mkdir -p ~/.config/systemd/user
+mv web.service ~/.config/systemd/user/
+podman stop web.service
+systemctl --user enable --now web.service
+loginctl enable-linger
 ```
 
 ---
 
-## ACLs
+## Password and Security Settings
 
-```bash
-# View
-ls -lahi                      # [MUST] quick view
-getfacl FILE_OR_DIR          # [MUST] show ACLs
+```
+/etc/security/pwquality.conf
+minlen = 8
 
-# Grant user / group
-setfacl -m u:harry:rwx  /data/file.txt   # [EASIER]
-setfacl -m g:devs:rx    /data            # [EASIER]
-# PERMS = r,w,x → combine as rwx / r-x / rw- / r--
-
-# Remove / reset
-setfacl -x u:harry /data/file.txt        # remove entry
-setfacl -b          /data/file.txt       # wipe all ACLs
-
-# Default ACLs on a dir (inherit to new files/dirs)
-setfacl -m d:u:harry:rw /shared
-
-# Copy ACLs
-getfacl source | setfacl --set-file=- target
+cat /etc/login.defs
+PASS_MAX_DAYS 999
 ```
 
 ---
 
-## LVM
+## GRUB Configuration
 
-```bash
-# CHOOSE disk layout (both valid on RHCSA)
-
-# No partitioning  [EASIER]
-pvcreate /dev/sdb
-vgcreate vgdata /dev/sdb
-lvcreate -n lvdata -L 2G vgdata
-
-# With partitioning  [ALT]
-cfdisk /dev/sdb      # make sdb1 = Linux LVM (8e00), write, quit
-pvcreate /dev/sdb1
-vgcreate vgdata /dev/sdb1
-lvcreate -n lvdata -L 2G vgdata
-
-# Filesystem + mount
-mkfs.xfs /dev/vgdata/lvdata                        # [CHOOSE] FS (ALT: mkfs.ext4 …)
-mkdir -p /data
-mount /dev/vgdata/lvdata /data
-echo '/dev/vgdata/lvdata /data xfs defaults 0 0' >> /etc/fstab   # [ALT]: use UUID=
-
-# Online extend LV + filesystem in one step (ext4 or XFS)
-lvextend -r -L +500M /dev/vgdata/lvdata            # -r auto-runs xfs_growfs/resize2fs
-# [TIP] -L = absolute size;  -l = extents/percent (e.g., -l +100%FREE)
-
-# Add a new disk → grow VG → extend LV
-pvcreate /dev/sdd
-vgextend vgdata /dev/sdd
-lvextend -r -l +100%FREE /dev/vgdata/lvdata
-
-# Inspect
-pvs; vgs; lvs; lsblk
-
-# Notes: XFS grow only; ext4 grow online, shrink offline (rare on RHCSA).
+```
+/etc/default/grub
+grub2-mkconfig -o /boot/grub2/grub.cfg
 ```
 
 ---
 
-## SELinux: `semanage`
+## LVM and Storage Management
 
-```bash
-# List known ports for a service type
-semanage port -l | grep http
+```
+pvcreate /dev/vdb
+vgcreate -s 20M my_vg_name /dev/vdb
+lvcreate -n my_lv_name -L 1G my_vg_name
+mkfs.xfs /dev/my_vg_name/my_lv_name
 
-# Allow nonstandard port
-semanage port -a -t http_port_t -p tcp 8081         # [EASIER]
-# [CHOOSE] type: http_port_t / ssh_port_t / dns_port_t …
-# [CHOOSE] proto: tcp|udp  [CHOOSE] port: number
+/dev/my_vg_name/my_lv_name /data xfs defaults 0 0
 
-# Modify / delete
-semanage port -m -t http_port_t -p tcp 8081
-semanage port -d -t http_port_t -p tcp 8081
-
-# Persistent file contexts
-semanage fcontext -a -t httpd_sys_content_t "/web(/.*)?"
-restorecon -Rv /web
+lvextend -r -L +500M /dev/vgdata/lvdata
 ```
 
 ---
 
-## find — RHCSA quick patterns
+## AutoFS Configuration
 
-````bash
-# Template
-find START [TESTS] -exec ACTION {} +          # [MUST] use + to batch
+```
+/etc/auto.master
+/mnt/netdir /etc/auto.home --timeout 30
 
-# Copy owned-by user → keep tree + attrs (root FS only)
-find / -xdev -user USER -type f -exec cp --parents -a -t /DEST {} +   # [EASIER]
-# [CHOOSE] USER, DEST
-
-# Recent big logs → list or copy
-find /PATH -type f -name "*.log" -size +10M -mtime -7 -print          # [COMMON]
-# ALT copy: ... -exec cp -a -t /DEST {} +
-
-# Fix inaccessible dirs (000) so they can be entered
-find /PATH -type d -perm -000 -exec chmod o+x {} +                     # [EASIER]
-
-# SUID audit (often asked)
-find / -xdev -perm -4000 -type f -ls                                   # [COMMON]
-
-# Remove empties under a path
-find /PATH -empty -delete                                              # [ALT]
-```bash
-# Copy all files owned by user → to /opt/dir, keep structure and attrs
-find / -xdev -user harry -type f -exec cp --parents -a -t /opt/dir {} +   # [EASIER]
-
-# Common variants
-find /data -type f -size +10M -mtime -7 -name "*.log"
-find /var -type d -perm -000 -exec chmod o+x {} +
-````
-
----
-
-## Password aging
-
-```bash
-# /etc/login.defs (defaults for NEW users)
-PASS_MIN_DAYS 0
-PASS_MAX_DAYS 20
-PASS_WARN_AGE 7
-# [CHOOSE] numbers. Labels fixed. Applies to users created AFTER change.
-
-# Existing user (often needed)
-chage -m 0 -M 20 -W 7 USER   # [EASIER]
+/etc/auto.home
+bobby  -rw,sync  repo.home:/home/bobby
 ```
 
 ---
 
-## DNF local repos
+## Flatpak Basics
 
-```ini
-# /etc/yum.repos.d/dvd.repo
-[BaseOS]
-name=BaseOS
-baseurl=http://domain.tld/x/BaseOS
-enabled=1
-gpgcheck=0
+```
+# 1. Enable Flathub repo (only once)
+flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 
-[AppStream]
-name=AppStream
-baseurl=http://domain.tld/x/AppStream
-enabled=1
-gpgcheck=0
-# [CHOOSE] section headers are conventional, not mandatory.
-# [CHOOSE] name= is a label; baseurl must match your served path.
-# [CHOOSE] gpgcheck=0 only if no keys; otherwise 1 + gpgkey=FILE/URL.
+# 2. List configured repos
+flatpak remotes
+
+# 3. Install an app (example: Calculator)
+flatpak install flathub org.gnome.Calculator -y
+
+# 4. List installed apps
+flatpak list
+
+# 5. Run an app
+flatpak run org.gnome.Calculator
+
+# 6. Remove an app
+flatpak uninstall org.gnome.Calculator -y
+
+# 7. Remove a repo
+flatpak remote-delete flathub
 ```
 
 ---
 
-## Packages + Chrony
+## Shell Scripting Basics
 
-```bash
-# EASIER installs (lean default)
-dnf install -y policy* mod_ssl httpd mandb chrony tuned
-
-# Optional bulk (only if task appears)
-dnf install -y autofs* lvm2* acl* firewalld* podman* nfs* NetworkManager-tui* man*
-
-# /etc/chrony.conf
-server 192.0.0.1 iburst     # [CHOOSE] server/pool; 'iburst' = fast initial sync
-# ALT: pool pool.ntp.org iburst
-# Check: systemctl enable --now chronyd; chronyc sources -v
 ```
+1. Run a script
+chmod +x script.sh
+./script.sh
 
----
+2. Variables and arguments
+#!/bin/bash
+echo "Script name: $0"
+echo "First arg: $1"
+echo "Second arg: $2"
 
-## Podman → systemd
+3. Conditional (if)
+#!/bin/bash
+if [ -f /etc/passwd ]; then
+  echo "File exists"
+else
+  echo "Missing"
+fi
 
-```bash
-podman generate systemd --new --files --name EXAMPLE1
-# Output .service in CWD → move:
-install -m 644 EXAMPLE1.service /etc/systemd/system/
-systemctl daemon-reload
-systemctl enable --now EXAMPLE1
-# [CHOOSE] container name; flags fixed in meaning.
-```
+4. Loop (for)
+#!/bin/bash
+for user in user1 user2 user3; do
+  echo "Checking $user"
+done
 
----
+5. Command substitution
+DATE=$(date +%F)
+echo "Today is $DATE"
 
-## Help quick‑glance
-
-```bash
-man CMD                  # open manual
-man 5 crontab            # section hint: 1=cmds, 5=formats, 8=admin
-man -k KEYWORD           # search manuals by keyword
-whatis CMD               # one-line summary
-CMD --help               # builtin help
-
-dnf search KEYWORD       # find package by name/summary
-dnf provides '*/semanage'# which package ships a file/binary
-which CMD                # where the command resolves from
+6. Exit status
+ls /etc/hosts >/dev/null 2>&1
+if [ $? -eq 0 ]; then echo OK; else echo FAIL; fi
 ```
